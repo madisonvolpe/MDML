@@ -1,17 +1,23 @@
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 ```{r}
 library(tidyverse)
 library(lubridate)
 ```
+
 # 2
 
-## A: Download 2013 NYC Taxi Data and Read Csvs
+## A) Download 2013 NYC Taxi Data and Read Csvs
 
 ```{r}
 trips <- read_csv("trip_data_8.csv")
 fares <- read_csv("trip_fare_8.csv")
 ```
 
-## B: Create new datasets based on 08/15/2018
+## B) Create new datasets based on 08/15/2018
 
 ```{r}
 #filtering on 08/15/2018
@@ -29,7 +35,7 @@ trips <- read_csv("trips_hw_1.csv")
 fares <- read_csv("fares_hw_1.csv") 
 ```
 
-## C: Clean both the ‘trips’ and ‘fares’ tibbles using your best judgment. Document your cleaning steps and assumptions.
+## C) Clean both the ‘trips’ and ‘fares’ tibbles using your best judgment. Document your cleaning steps and assumptions.
 
 ## Trips 
 
@@ -45,13 +51,9 @@ trips <- trips %>%
   arrange(trip_distance)
 ```
 
-The documentation for the dataset describes trip distance as trip distance measured by the taximeter in miles. The summary command reveals that the range of trip_distance in the dataset is from 0 miles to 5043318 miles. When we subset the trips tibble on trips that have a trip_distance greater than 50, we see that there are only 49 observations out of 473,544 that have trip_distance greater than 50 miles. Therefore, we made the decision to restrict observations in trips to trip_distances greater than 0, but less than 50 miles. 
-
 ```{r}
 summary(trips$trip_distance)
 ```
-
-We now see that the range of our trip_distance variable in the trips tibble is from .01 miles to 48 miles, which seems more reasonable. 
 
 ### Examining passenger_count
 
@@ -64,8 +66,6 @@ trips <- trips %>%
 summary(trips$passenger_count)
 ```
 
-According to NYC.gov, the legal amount of passengers for taxis in NYC is between four or five depending on the size of the vehicle. Also small children are allowed to sit on laps in the back seat, therefore a max of six passengers is justifiable. 
-
 ### Examining trip_time_in_secs in trips tibble
 
 ```{r}
@@ -76,10 +76,6 @@ Differences <- trips %>%
 
 all(Differences$trip_time_in_secs == as.integer(Differences$trip_time_in_secs_2))
 ```
-
-The documentation for the dataset describes the trip_time_in_secs field as the trip time measured in seconds by the taximetere. However, it also states that sometimes this variable is recorded in minutes.Therefore, they note that this variable is unreliable. They state that a more reliable measure of trip_time is obtained when y subtracting the pickup_datetime from the dropoff_datetime.
-
-The initial summary of trip_time_in_secs shows that the range for this value is from -10 to 22080. We then compute the more "accurate" measure of trip_time by subtracting pickup_datetime from dropoff_datetime, we name this variable trip_time_in_secs_2. We used transmute to create a new tibble "Differences" that shows the original trip_time_in_secs, native to the dataset, and trip_time_in_secs_2, the value we calculated in order to compare how these two measures differ. We used the all command to check if the two columns trip_time_in_secs and trip_time_in_secs2 were the same for all values. The FALSE informs us that they are not. 
 
 ```{r}
 trips <- mutate(trips, trip_time_in_secs_2 = as.duration(dropoff_datetime - pickup_datetime), diff = abs(dseconds(trip_time_in_secs) - trip_time_in_secs_2))
@@ -98,10 +94,6 @@ trips <- select(trips, -trip_time_in_secs_2, -diff)
 summary(trips$trip_time_in_secs)
 ```
 
-As a result, in the trips dataframe we add the trip_time_in_secs2 variable, which is computed by subtracting pickup_datetime from dropoff_datetime. We then create another new variable diff, which takes the difference from the trip_time_in_secs variable, native to the dataset and sometimes wrong, and trip_time_in_secs2 variable, constructed as a more valid measure of trip time. We then filter to include only the trips that differ between these two measures by less than one min. 
-
-After doing this, the summary of trip_time_in_secs still reveals unlikely numbers, such as -10 second trip time.The max value of 22080 seconds or 6.1 hours seems likely. Finally, the mean of 13.8 mins does seem likely. 
-
 ```{r}
 #filter to remove negative trip times that are less than 60 seconds (1 min)
 trips <- trips %>%
@@ -112,8 +104,6 @@ trips%>%
 
 summary(trips$trip_time_in_secs)
 ```
-
-Ultimately, we decided to keep trips that only have trip_time_in_secs greater than or equal to 60 seconds (1 minute). This was checked by running summary on trip_time_in_secs to reveal the min value of 60. 
 
 ## Fares
 
@@ -130,7 +120,6 @@ fares <- fares %>%
 unique(fares$payment_type)
 ```
 
-We decided to examine payment_type and we limited payment_type to only cash and credit payments. 
 
 ### Examining fare_amount 
 
@@ -149,8 +138,6 @@ fares <- fares %>%
 #reobserving fare_amount
 summary(fares$fare_amount)
 ```
-
-We see that fare_amount, which represents the meter fare in USD, has a range of -460.00 dollars to 955.00 dollars.  We further examine that there are 126 observations with negative fare_amount by observation we can see that there total_amount is also negative. Furthermore, we observed that there are 4 observations with fare_amount greater than 500 dollars. We decided to drop any fare_amount less than 2.50 because 2.50 is the minimum initial charge listed by NYC Taxi & Limousine Commission, but we keep the fare_amount values over 500 dollars.
 
 ### Examining other charges and amounts
 
@@ -174,19 +161,50 @@ fares[fares$total_amount>500,]
 trips$UID <- paste(trips$medallion, trips$hack_license, trips$pickup_datetime, sep = "_")
 fares$UID <- paste(fares$medallion, fares$hack_license, fares$pickup_datetime, sep = "_")
 
-trips %>% count(UID)%>%filter(n>1) #works for trips
-Test <- fares %>% count(UID)%>%filter(n>1) #does not work for trips 
+trips %>% count(UID)%>%filter(n>1) #works for trips 
+length(unique(trips$UID)) == nrow(trips) #also see if true 
+
+fares %>% count(UID)%>%filter(n>1) #does not work for trips 
+length(unique(fares$UID)) == nrow(fares) #we can see that there are duplicates! 
 
 trips <- distinct(trips)
 fares <- distinct(fares)
 ```
 
 ```{r}
+fares$pickup_datetime <- as.POSIXct(fares$pickup_datetime)
+taxi_data <- trips %>% left_join(fares)
+taxi_data %>% count(UID)%>%filter(n>1) #works for trips 
+``` 
 
-Test <- fares %>%
-  count(UID)%>%
-  filter(n>1)
-
-#does not work for trips
-ATEST <- right_join(trips, fares)
+```{r}
+# let's use anti join to see if there are rows in trips that don't have corresponding fares associated
+trips %>% anti_join(fares)
 ```
+
+```{r}
+# now let's get rid of those "duplicate" rows in the fares tibble by keeping the fare with highest total amount
+fares <- fares %>% arrange(desc(total_amount)) %>% distinct(medallion, hack_license, pickup_datetime, .keep_all = TRUE)
+```
+
+```{r}
+taxi_data <- inner_join(trips,fares)
+
+nrow(taxi_data) + nrow(trips %>% anti_join(fares)) == nrow(trips) # we now see that the number of rows resulting from the inner joing plus the nrow  from the anti join does equal the nrow of trips 
+```
+
+```{r}
+length(unique(taxi_data$UID)) == nrow(taxi_data) #one row for each trip test 
+sum(is.na(taxi_data[,16:22])) #complete fare information for each trip test. 
+```
+
+## E) For each taxicab, identified by the unique ‘medallion’ field, compute: i) total_trips: the total number of trips begun on 8/15/2018, ii) total_passengers: the total number of passengers carried on 8/15/2018, iii) total_time_with_passengers: the total amount of time spent carrying passengers on 8/15/2018, iv) total_distance: the total distance traveled on 8/15/2018, and v) total_earnings: the total amount of money earned on 8/15/2018. The columns of your final output tibble should be: [medallion, total_trips, total_passengers, total_time_with_passengers, total_distance, total_earnings].
+
+```{r}
+taxi_data %>%
+  group_by(medallion)%>%
+  transmute(total_trips = n(), total_passengers = sum(passenger_count), total_time_with_passengers = sum(trip_time_in_secs), total_distance = sum(trip_distance), total_earnings = sum(total_amount))
+```
+
+
+

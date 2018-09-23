@@ -229,8 +229,10 @@ taxi_data %>%
   group_by(hack_license, hour)%>%
   summarise(total_time_with_passengers = sum(trip_time_in_secs), miles_with_passengers = sum(trip_distance), earnings = sum(fare_amount, tip_amount))
 
-# a start might have to switch 
+# a start might have to switch
+# test
 ```
+
 
 
 

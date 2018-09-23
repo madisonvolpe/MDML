@@ -205,6 +205,32 @@ taxi_data %>%
   group_by(medallion)%>%
   transmute(total_trips = n(), total_passengers = sum(passenger_count), total_time_with_passengers = sum(trip_time_in_secs), total_distance = sum(trip_distance), total_earnings = sum(total_amount))
 ```
+## F)
+
+```{r}
+#get hours as its own column 
+taxi_data$hour <- hour(taxi_data$pickup_datetime)
+length(unique(taxi_data$hour)) #check to see if there are 24 unique hours! 
+```
+
+```{r}
+taxi_data %>%
+  group_by(hack_license,hour)%>%
+  summarise(total_passengers_picked_up = sum(passenger_count), trips_started = n())
+
+ATEST <- taxi_data[taxi_data$hack_license == 2013000001,]#check
+ATEST2<- ATEST[ATEST$hour==22,] #this code was a check we can delete it after - but it shows that our output is right, there were 3 trips started for this ID at hr 22, likewise the total passenger count is really 24! 
+```
+
+##G) 
+
+```{r}
+taxi_data %>%
+  group_by(hack_license, hour)%>%
+  summarise(total_time_with_passengers = sum(trip_time_in_secs), miles_with_passengers = sum(trip_distance), earnings = sum(fare_amount, tip_amount))
+
+# a start might have to switch 
+```
 
 
 

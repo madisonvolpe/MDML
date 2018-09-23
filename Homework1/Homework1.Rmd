@@ -281,36 +281,71 @@ We can see that the number of unique UIDs in taxi_data is equal to the number of
 ## E) For each taxicab, identified by the unique ‘medallion’ field, compute: i) total_trips: the total number of trips begun on 8/15/2018, ii) total_passengers: the total number of passengers carried on 8/15/2018, iii) total_time_with_passengers: the total amount of time spent carrying passengers on 8/15/2018, iv) total_distance: the total distance traveled on 8/15/2018, and v) total_earnings: the total amount of money earned on 8/15/2018. The columns of your final output tibble should be: [medallion, total_trips, total_passengers, total_time_with_passengers, total_distance, total_earnings].
 
 ```{r}
-taxi_data %>%
+QE <- taxi_data %>%
   group_by(medallion)%>%
   transmute(total_trips = n(), total_passengers = sum(passenger_count), total_time_with_passengers = sum(trip_time_in_secs), total_distance = sum(trip_distance), total_earnings = sum(total_amount))
+
+head(QE)
 ```
+
 ## F) For each driver, identified by his or her anonymized hack license, and for each of the 24 hours on 8/15/2018, compute: i) total_passengers_picked_up: the total number of passengers picked up during the hour, and ii) trips_started: the total number of trips started during the hour. The columns of your final output tibble should be: [hack_license, hour, total_passengers_picked_up, trips_started]. 
 
 ```{r}
-#get hours as its own column 
-taxi_data$hour <- hour(taxi_data$pickup_datetime)
-length(unique(taxi_data$hour)) #check to see if there are 24 unique hours! 
+taxi_data$hourstart <- hour(taxi_data$pickup_datetime)#get hours as its own column 
+length(unique(taxi_data$hourstart)) #check to see if there are 24 unique hours! 
+```
+
+We added an hourstart column to the taxi data set, by taking the hour value of pickup_datetime for each observation of taxi_data. We then checked that there were only 24 unique values representing the 24 hours. 
+
+```{r}
+options(scipen = 999)
+Combinations<-crossing(taxi_data$hack_license,taxi_data$hourstart)
+names(Combinations) <- c("hack_license", "hourstart")
+taxi_data <- right_join(taxi_data,Combinations)
 ```
 
 ```{r}
-taxi_data %>%
-  group_by(hack_license,hour)%>%
-  summarise(total_passengers_picked_up = sum(passenger_count), trips_started = n())
+# Test <- taxi_data[taxi_data$hack_license== 2013000001,]
+# Test %>%
+# group_by(hack_license,hourstart) %>%
+# mutate(passenger_count = ifelse(is.na(passenger_count), 0, passenger_count), trip = ifelse(!is.na(medallion), TRUE, FALSE)) %>%
+# summarise(passenger_count = sum(passenger_count), trips_started = sum(trip))
 
-ATEST <- taxi_data[taxi_data$hack_license == 2013000001,]#check
-ATEST2<- ATEST[ATEST$hour==22,] #this code was a check we can delete it after - but it shows that our output is right, there were 3 trips started for this ID at hr 22, likewise the total passenger count is really 24! 
+QF <- taxi_data %>%
+   group_by(hack_license,hourstart) %>%
+  mutate(passenger_count = ifelse(is.na(passenger_count), 0, passenger_count), trip =  ifelse(!is.na(medallion), TRUE, FALSE)) %>%
+summarise(passenger_count = sum(passenger_count), trips_started = sum(trip))
+
+head(QF, 24)
 ```
+
 
 ## G) For each driver, identified by his or her anonymized hack license, and for each of the 24 hours on 8/15/2018, compute: i) total_time_with_passengers, the total amount of time with passengers in the cab during the hour. ii) miles_with_passengers, the total number of miles traveled with passengers in the hour. For trips that cross an hour boundary, assume the driver traveled at a constant speed for the duration of the trip.iii) earnings, the total amount of money the driver earned in that hour. As with mileage, for trips that cross an hour boundary, assume drivers earn the final payment at a constant rate throughout the trip. Earnings consist of the fare plus the tip.The columns of your final output tibble should be: [hack_license, hour, total_time_with_passengers, miles_with_passengers, earnings]. 
 
-```{r}
-taxi_data %>%
-  group_by(hack_license, hour)%>%
-  summarise(total_time_with_passengers = sum(trip_time_in_secs), miles_with_passengers = sum(trip_distance), earnings = sum(fare_amount, tip_amount))
+## preliminary work 
 
-# a start might have to switch 
-# a test 
-``` 
+```{r}
+taxi_data$hourrange <- paste(hour(taxi_data$pickup_datetime), hour(taxi_data$dropoff_datetime), sep = "-")
+taxi_data$differencetime = difftime(taxi_data$dropoff_datetime,taxi_data$pickup_datetime)
+```
+
+```{r}
+options(scipen = 999)
+
+G <- taxi_data %>%
+  group_by(hack_license, hour) %>%
+  mutate(trip_time_in_secs = ifelse(trip_time_in_secs > 3600, 3600, trip_time_in_secs))%>%
+  mutate(avg_speed = ifelse(trip_time_in_secs>3600, (trip_distance/3600)*3600,avg_speed)) %>%
+  summarise(count = n())
+
+
+
+  summarise(total_time_with_passengers = sum(trip_time_in_secs), miles_with_passengers = sum(trip_distance), earnings = sum(fare_amount, tip_amount))
+```
+
+NEED TO FIX THIS !
+
+
+
 
 

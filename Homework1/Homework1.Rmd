@@ -285,6 +285,31 @@ taxi_data %>%
   group_by(medallion)%>%
   transmute(total_trips = n(), total_passengers = sum(passenger_count), total_time_with_passengers = sum(trip_time_in_secs), total_distance = sum(trip_distance), total_earnings = sum(total_amount))
 ```
+## F) For each driver, identified by his or her anonymized hack license, and for each of the 24 hours on 8/15/2018, compute: i) total_passengers_picked_up: the total number of passengers picked up during the hour, and ii) trips_started: the total number of trips started during the hour. The columns of your final output tibble should be: [hack_license, hour, total_passengers_picked_up, trips_started]. 
 
+```{r}
+#get hours as its own column 
+taxi_data$hour <- hour(taxi_data$pickup_datetime)
+length(unique(taxi_data$hour)) #check to see if there are 24 unique hours! 
+```
+
+```{r}
+taxi_data %>%
+  group_by(hack_license,hour)%>%
+  summarise(total_passengers_picked_up = sum(passenger_count), trips_started = n())
+
+ATEST <- taxi_data[taxi_data$hack_license == 2013000001,]#check
+ATEST2<- ATEST[ATEST$hour==22,] #this code was a check we can delete it after - but it shows that our output is right, there were 3 trips started for this ID at hr 22, likewise the total passenger count is really 24! 
+```
+
+## G) For each driver, identified by his or her anonymized hack license, and for each of the 24 hours on 8/15/2018, compute: i) total_time_with_passengers, the total amount of time with passengers in the cab during the hour. ii) miles_with_passengers, the total number of miles traveled with passengers in the hour. For trips that cross an hour boundary, assume the driver traveled at a constant speed for the duration of the trip.iii) earnings, the total amount of money the driver earned in that hour. As with mileage, for trips that cross an hour boundary, assume drivers earn the final payment at a constant rate throughout the trip. Earnings consist of the fare plus the tip.The columns of your final output tibble should be: [hack_license, hour, total_time_with_passengers, miles_with_passengers, earnings]. 
+
+```{r}
+taxi_data %>%
+  group_by(hack_license, hour)%>%
+  summarise(total_time_with_passengers = sum(trip_time_in_secs), miles_with_passengers = sum(trip_distance), earnings = sum(fare_amount, tip_amount))
+
+# a start might have to switch 
+``` 
 
 

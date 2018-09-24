@@ -238,7 +238,7 @@ fares$UID <- paste(fares$medallion, fares$hack_license, fares$pickup_datetime, s
 trips %>% count(UID)%>%filter(n>1) #works for trips 
 length(unique(trips$UID)) == nrow(trips) #also see if true 
 
-fares %>% count(UID)%>%filter(n>1) #does not work for trips 
+fares %>% count(UID)%>%filter(n>1) #does not work for fares 
 length(unique(fares$UID)) == nrow(fares) #we can see that there are duplicates! 
 
 trips <- distinct(trips)
@@ -291,16 +291,16 @@ head(QE)
 ## F) For each driver, identified by his or her anonymized hack license, and for each of the 24 hours on 8/15/2018, compute: i) total_passengers_picked_up: the total number of passengers picked up during the hour, and ii) trips_started: the total number of trips started during the hour. The columns of your final output tibble should be: [hack_license, hour, total_passengers_picked_up, trips_started]. 
 
 ```{r}
-taxi_data$hourstart <- hour(taxi_data$pickup_datetime)#get hours as its own column 
-length(unique(taxi_data$hourstart)) #check to see if there are 24 unique hours! 
+taxi_data$hour <- hour(taxi_data$pickup_datetime)#get hours as its own column 
+length(unique(taxi_data$hour)) #check to see if there are 24 unique hours! 
 ```
 
-We added an hourstart column to the taxi data set, by taking the hour value of pickup_datetime for each observation of taxi_data. We then checked that there were only 24 unique values representing the 24 hours. 
+We added an hourstart column to the taxi dataset, by taking the hour value of pickup_datetime for each observation of taxi_data. We then checked that there were only 24 unique values representing the 24 hours. 
 
 ```{r}
 options(scipen = 999)
-Combinations<-crossing(taxi_data$hack_license,taxi_data$hourstart)
-names(Combinations) <- c("hack_license", "hourstart")
+Combinations<-crossing(taxi_data$hack_license,taxi_data$hour)
+names(Combinations) <- c("hack_license", "hour")
 taxi_data <- right_join(taxi_data,Combinations)
 ```
 
@@ -312,9 +312,9 @@ taxi_data <- right_join(taxi_data,Combinations)
 # summarise(passenger_count = sum(passenger_count), trips_started = sum(trip))
 
 QF <- taxi_data %>%
-   group_by(hack_license,hourstart) %>%
+   group_by(hack_license,hour) %>%
   mutate(passenger_count = ifelse(is.na(passenger_count), 0, passenger_count), trip =  ifelse(!is.na(medallion), TRUE, FALSE)) %>%
-summarise(passenger_count = sum(passenger_count), trips_started = sum(trip))
+summarise(total_passengers_picked_up = sum(passenger_count), trips_started = sum(trip))
 
 head(QF, 24)
 ```
@@ -323,6 +323,71 @@ head(QF, 24)
 ## G) For each driver, identified by his or her anonymized hack license, and for each of the 24 hours on 8/15/2018, compute: i) total_time_with_passengers, the total amount of time with passengers in the cab during the hour. ii) miles_with_passengers, the total number of miles traveled with passengers in the hour. For trips that cross an hour boundary, assume the driver traveled at a constant speed for the duration of the trip.iii) earnings, the total amount of money the driver earned in that hour. As with mileage, for trips that cross an hour boundary, assume drivers earn the final payment at a constant rate throughout the trip. Earnings consist of the fare plus the tip.The columns of your final output tibble should be: [hack_license, hour, total_time_with_passengers, miles_with_passengers, earnings]. 
 
 ## preliminary work 
+
+
+```{r}
+# Check latest dropoff dates and times
+taxi_data %>% arrange(desc(dropoff_datetime)) %>% select(dropoff_datetime) %>% head(10)
+
+# Sample of 100 to test on
+sample_taxi <- filter(taxi_data, hack_license %in% sample(taxi_data$hack_license, 100))
+
+# Five Cases
+# 1. trip starts and ends in same hour
+      # To ID: hour == hour_end
+      # time = time in secs; miles = trip dist; earnings = fare + tip
+# 2. trip starts this hour, but ends in different hour same day
+      # To ID: hour < hour_end
+      # time = (hour + 1) - start time; miles = avg_spd * (time/3600);
+      # earnings = (fare + tip) * (time/trip time)
+# 3. >special case: starts this hour and ends hour 0 of next day
+      # To ID: hour > hour_end
+      # time = (hour + 1) - start time; miles = avg_spd * (time/3600);
+      # earnings = (fare + tip) * (time/trip time)
+# 4. trip started in previous hour and ends this hour
+      # To ID: if hour(dropoff) for previous hour == current hour, then
+      # time = dropoff - (hour-1); miles = avg_spd * (time/3600);
+      # earnings = (fare + tip) * (time/trip time)
+# 5. trip started in some previous hour and ends in some future hour, and includes this hour
+      # To ID: 
+      # time = 3600; miles = avg_speed; earnings = (fare + tip) * (3600/trip time)
+
+
+
+
+QG <- sample_taxi %>%
+  # Subset to only needed columns
+  select(hack_license, pickup_datetime, dropoff_datetime, trip_time_in_secs, 
+         trip_distance, avg_speed, fare_amount, tip_amount, hour) %>%
+  # Add end time column
+  mutate(end_hour = 
+           case_when(date(dropoff_datetime) == "2013-08-15" ~ hour(dropoff_datetime),
+                     date(dropoff_datetime) == "2013-08-16" ~ as.integer(24))) %>%
+  # Apply to observations without NAs for end_hour
+QG <- QG %>%  group_by(hack_license, hour) %>%
+  mutate(total_time_with_passengers = 
+           case_when(hour == end_hour ~ as.numeric(trip_time_in_secs),
+                     hour < end_hour ~ as.numeric(as.duration(update(pickup_datetime, 
+                          hour = (hour + 1), minute = 0, second = 0) - pickup_datetime)),
+                     end_hour == NA ~ 0),
+                              
+         miles_with_passengers = 
+           case_when(hour == end_hour ~ as.numeric(trip_distance),
+                     hour < end_hour ~ 
+                       as.numeric(avg_speed * (total_time_with_passengers/3600)),
+                     end_hour == NA ~ 0),
+         
+         earnings = 
+           case_when(hour == end_hour ~ as.numeric(sum(fare_amount, tip_amount)),
+                     hour < end_hour ~ as.numeric((fare_amount + tip_amount) *
+                       (total_time_with_passengers/trip_time_in_secs)),
+                     end_hour == NA ~ 0))
+
+
+
+
+
+```
 
 ```{r}
 taxi_data$hourrange <- paste(hour(taxi_data$pickup_datetime), hour(taxi_data$dropoff_datetime), sep = "-")

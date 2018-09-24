@@ -360,7 +360,8 @@ QG <- sample_taxi %>%
            case_when(date(dropoff_datetime) == "2013-08-15" ~ hour(dropoff_datetime),
                      date(dropoff_datetime) == "2013-08-16" ~ as.integer(24)))
 
-  # Apply to observations without NAs for end_hour
+  # Apply to observations without NAs for end_hour;
+  # This should capture all trips starting in hour until hour end
 QG <- QG %>%  group_by(hack_license, hour) %>%
   mutate(total_time_with_passengers = 
            case_when(hour == end_hour ~ as.numeric(trip_time_in_secs),
@@ -378,13 +379,18 @@ QG <- QG %>%  group_by(hack_license, hour) %>%
                        (total_time_with_passengers/trip_time_in_secs))))
 
 ##### Works up until here
+
+# Capture trips that cover full hour (start in previous, end in later)
 QG <- QG %>% group_by(hack_license) 
   for (i in 1:length(QG$hour)) {
-    
+    if (is.na(QG$end_hour[i]) == T) 
   }
 
 
+# Capture trips that start in previous, end in current
 
+
+# Append tibbles and summarise
 
 ```
 

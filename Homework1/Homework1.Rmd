@@ -305,12 +305,6 @@ taxi_data <- right_join(taxi_data,Combinations)
 ```
 
 ```{r}
-# Test <- taxi_data[taxi_data$hack_license== 2013000001,]
-# Test %>%
-# group_by(hack_license,hourstart) %>%
-# mutate(passenger_count = ifelse(is.na(passenger_count), 0, passenger_count), trip = ifelse(!is.na(medallion), TRUE, FALSE)) %>%
-# summarise(passenger_count = sum(passenger_count), trips_started = sum(trip))
-
 QF <- taxi_data %>%
    group_by(hack_license,hour) %>%
   mutate(passenger_count = ifelse(is.na(passenger_count), 0, passenger_count), trip =  ifelse(!is.na(medallion), TRUE, FALSE)) %>%
@@ -365,6 +359,7 @@ QG <- sample_taxi %>%
   mutate(end_hour = 
            case_when(date(dropoff_datetime) == "2013-08-15" ~ hour(dropoff_datetime),
                      date(dropoff_datetime) == "2013-08-16" ~ as.integer(24)))
+
   # Apply to observations without NAs for end_hour
 QG <- QG %>%  group_by(hack_license, hour) %>%
   mutate(total_time_with_passengers = 

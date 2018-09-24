@@ -356,7 +356,7 @@ QG <- sample_taxi %>%
   # Add end time column
   mutate(end_hour = 
            case_when(date(dropoff_datetime) == "2013-08-15" ~ hour(dropoff_datetime),
-                     date(dropoff_datetime) == "2013-08-16" ~ as.integer(24))) %>%
+                     date(dropoff_datetime) == "2013-08-16" ~ as.integer(24))) 
   # Apply to observations without NAs for end_hour
 QG <- QG %>%  group_by(hack_license, hour) %>%
   mutate(total_time_with_passengers = 

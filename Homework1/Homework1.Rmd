@@ -329,8 +329,10 @@ head(QF, 24)
 # Check latest dropoff dates and times
 taxi_data %>% arrange(desc(dropoff_datetime)) %>% select(dropoff_datetime) %>% head(10)
 
-# Sample of 100 to test on
-sample_taxi <- filter(taxi_data, hack_license %in% sample(taxi_data$hack_license, 100))
+# Sample of 1000 hack licenses to test on, including trip over two hours
+set.seed(888)
+sample_taxi <- filter(taxi_data, hack_license %in% sample(taxi_data$hack_license, 1000))
+sum(sample_taxi$trip_time_in_secs > 7200, na.rm = T)
 
 # Five Cases
 # 1. trip starts and ends in same hour
@@ -359,30 +361,32 @@ QG <- sample_taxi %>%
   # Subset to only needed columns
   select(hack_license, pickup_datetime, dropoff_datetime, trip_time_in_secs, 
          trip_distance, avg_speed, fare_amount, tip_amount, hour) %>%
-  # Add end time column
+  # Add end time column with 24 instead of dealing with 0s on second day
   mutate(end_hour = 
            case_when(date(dropoff_datetime) == "2013-08-15" ~ hour(dropoff_datetime),
-                     date(dropoff_datetime) == "2013-08-16" ~ as.integer(24))) %>%
+                     date(dropoff_datetime) == "2013-08-16" ~ as.integer(24)))
   # Apply to observations without NAs for end_hour
 QG <- QG %>%  group_by(hack_license, hour) %>%
   mutate(total_time_with_passengers = 
            case_when(hour == end_hour ~ as.numeric(trip_time_in_secs),
                      hour < end_hour ~ as.numeric(as.duration(update(pickup_datetime, 
-                          hour = (hour + 1), minute = 0, second = 0) - pickup_datetime)),
-                     end_hour == NA ~ 0),
+                          hour = (hour + 1), minute = 0, second = 0) - pickup_datetime))),
                               
          miles_with_passengers = 
            case_when(hour == end_hour ~ as.numeric(trip_distance),
                      hour < end_hour ~ 
-                       as.numeric(avg_speed * (total_time_with_passengers/3600)),
-                     end_hour == NA ~ 0),
+                       as.numeric(avg_speed * (total_time_with_passengers/3600))),
          
          earnings = 
            case_when(hour == end_hour ~ as.numeric(sum(fare_amount, tip_amount)),
                      hour < end_hour ~ as.numeric((fare_amount + tip_amount) *
-                       (total_time_with_passengers/trip_time_in_secs)),
-                     end_hour == NA ~ 0))
+                       (total_time_with_passengers/trip_time_in_secs))))
 
+##### Works up until here
+QG <- QG %>% group_by(hack_license) 
+  for (i in 1:length(QG$hour)) {
+    
+  }
 
 
 

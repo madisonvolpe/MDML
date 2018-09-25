@@ -300,13 +300,13 @@ We added an hour column to the taxi dataset, by taking the hour value of pickup_
 options(scipen = 999)
 Combinations<-crossing(QF$hack_license,QF$hour)
 names(Combinations) <- c("hack_license", "hour")
-
+QF <- right_join(QF, Combinations)
 ```
 
 
 
 ```{r}
-QF <- taxi_data %>% right_join(Combinations) %>%
+QF <- QF %>%
    group_by(hack_license,hour) %>%
   mutate(passenger_count = ifelse(is.na(passenger_count), 0, passenger_count), trip =  ifelse(!is.na(medallion), TRUE, FALSE)) %>%
 summarise(total_passengers_picked_up = sum(passenger_count), trips_started = sum(trip))
@@ -427,10 +427,10 @@ QG <- taxi_data
 QG$pickuphour <- hour(QG$pickup_datetime)
 QG$dropoffhour <- hour(QG$dropoff_datetime)
 
-QG <-QG %>% 
-  mutate(dropoffhour = 
-           case_when(date(dropoff_datetime) == "2013-08-15" ~ hour(dropoff_datetime),
-                     date(dropoff_datetime) == "2013-08-16" ~ as.integer(24)))
+# QG <-QG %>% 
+#   mutate(dropoffhour = 
+#            case_when(date(dropoff_datetime) == "2013-08-15" ~ hour(dropoff_datetime),
+#                      date(dropoff_datetime) == "2013-08-16" ~ as.integer(24)))
 ```
 
 #Use crossing command to join the table with a list of numbers from 0 to 23 (hours).
@@ -446,8 +446,14 @@ nrow(QG) == 24*nrow(taxi_data) #if the taxi_data table had n rows, then the new 
 ```{r}
 QG %>%
   mutate(time_within_hour = 
-           case_when(pickuphour == hour & dropoffhour == hour ~ as.duration(dropoff_datetime-pickup_datetime),
-                     pickuphour == hour & dropoffhour > hour  ~ as.duration(),
+           case_when(pickuphour == hour & dropoffhour == hour ~
+                       as.duration(dropoff_datetime-pickup_datetime),
+                     pickuphour == hour & dropoffhour > hour  ~
+                       as.numeric(as.duration(update(pickup_datetime, 
+                        hour = (hour + 1), minute = 0, second = 0) - pickup_datetime)),
+                     # pickuphour == hour & dropoffhour < hour ~
+                     #   as.numeric(as.duration(update(pickup_datetime, day = (day+1) 
+                     #    hour = 0, minute = 0, second = 0) - pickup_datetime)),
                      pickuphour < hour & dropoffhour == hour ~ ,
                      pickuphour < hour & dropoffhour > hour ~, 
                      pickuphour < hour & dropoffhour < hour | pickuphour > hour & dropoffhour > hour ~ 0)) 

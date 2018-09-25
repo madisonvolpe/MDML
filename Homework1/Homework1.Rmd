@@ -38,8 +38,8 @@ write_csv(fares, "fares_hw_1.csv")
 
 ```{r, message=FALSE}
 #read in csvs 
-trips <- read_csv("trips_hw_1.csv")
-fares <- read_csv("fares_hw_1.csv") 
+trips <- read_csv("../../data/trips_hw_1.csv")
+fares <- read_csv("../../data/fares_hw_1.csv") 
 ```
 
 ## C) Clean both the ‘trips’ and ‘fares’ tibbles using your best judgment. Document your cleaning steps and assumptions.
@@ -300,11 +300,13 @@ We added an hour column to the taxi dataset, by taking the hour value of pickup_
 options(scipen = 999)
 Combinations<-crossing(QF$hack_license,QF$hour)
 names(Combinations) <- c("hack_license", "hour")
-QF <- right_join(QF,Combinations)
+
 ```
 
+
+
 ```{r}
-QF <- QF %>%
+QF <- taxi_data %>% right_join(Combinations) %>%
    group_by(hack_license,hour) %>%
   mutate(passenger_count = ifelse(is.na(passenger_count), 0, passenger_count), trip =  ifelse(!is.na(medallion), TRUE, FALSE)) %>%
 summarise(total_passengers_picked_up = sum(passenger_count), trips_started = sum(trip))

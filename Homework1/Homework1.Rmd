@@ -160,8 +160,6 @@ trips <- filter(trips,
 #                                       fun = distHaversine))
 ```
 
-
-
 ## Fares
 
 ### Examining payment_type 
@@ -291,21 +289,22 @@ head(QE)
 ## F) For each driver, identified by his or her anonymized hack license, and for each of the 24 hours on 8/15/2018, compute: i) total_passengers_picked_up: the total number of passengers picked up during the hour, and ii) trips_started: the total number of trips started during the hour. The columns of your final output tibble should be: [hack_license, hour, total_passengers_picked_up, trips_started]. 
 
 ```{r}
-taxi_data$hour <- hour(taxi_data$pickup_datetime)#get hours as its own column 
-length(unique(taxi_data$hour)) #check to see if there are 24 unique hours! 
+QF <- taxi_data
+QF$hour <- hour(QF$pickup_datetime)#get hours as its own column 
+length(unique(QF$hour)) #check to see if there are 24 unique hours! 
 ```
 
-We added an hourstart column to the taxi dataset, by taking the hour value of pickup_datetime for each observation of taxi_data. We then checked that there were only 24 unique values representing the 24 hours. 
+We added an hour column to the taxi dataset, by taking the hour value of pickup_datetime for each observation of QF. We then checked that there were only 24 unique values representing the 24 hours. 
 
 ```{r}
 options(scipen = 999)
-Combinations<-crossing(taxi_data$hack_license,taxi_data$hour)
+Combinations<-crossing(QF$hack_license,QF$hour)
 names(Combinations) <- c("hack_license", "hour")
-taxi_data <- right_join(taxi_data,Combinations)
+QF <- right_join(QF,Combinations)
 ```
 
 ```{r}
-QF <- taxi_data %>%
+QF <- QF %>%
    group_by(hack_license,hour) %>%
   mutate(passenger_count = ifelse(is.na(passenger_count), 0, passenger_count), trip =  ifelse(!is.na(medallion), TRUE, FALSE)) %>%
 summarise(total_passengers_picked_up = sum(passenger_count), trips_started = sum(trip))
@@ -327,30 +326,6 @@ taxi_data %>% arrange(desc(dropoff_datetime)) %>% select(dropoff_datetime) %>% h
 set.seed(888)
 sample_taxi <- filter(taxi_data, hack_license %in% sample(taxi_data$hack_license, 1000))
 sum(sample_taxi$trip_time_in_secs > 7200, na.rm = T)
-
-# Five Cases
-# 1. trip starts and ends in same hour
-      # To ID: hour == hour_end
-      # time = time in secs; miles = trip dist; earnings = fare + tip
-# 2. trip starts this hour, but ends in different hour same day
-      # To ID: hour < hour_end
-      # time = (hour + 1) - start time; miles = avg_spd * (time/3600);
-      # earnings = (fare + tip) * (time/trip time)
-#   >special case: starts this hour and ends hour 0 of next day
-      # To ID: hour > hour_end
-      # time = (hour + 1) - start time; miles = avg_spd * (time/3600);
-      # earnings = (fare + tip) * (time/trip time)
-# 3. trip started in previous hour and ends this hour
-      # To ID: if hour(dropoff) for previous hour == current hour, then
-      # time = dropoff - (hour-1); miles = avg_spd * (time/3600);
-      # earnings = (fare + tip) * (time/trip time)
-# 4. trip started in some previous hour and ends in some future hour, and includes this hour
-      # To ID: 
-      # time = 3600; miles = avg_speed; earnings = (fare + tip) * (3600/trip time)
-# 5.  hour with no trips/parts of trips
-      # Put in zeros for all
-
-
 
 
 QG <- sample_taxi %>%
@@ -417,7 +392,62 @@ G <- taxi_data %>%
 
 NEED TO FIX THIS !
 
+## My attempt - w. Dorota's hints
 
+```{r}
+# Five Cases
+# 1. trip starts and ends in same hour
+      # To ID: hour == hour_end
+      # time = time in secs; miles = trip dist; earnings = fare + tip
+# 2. trip starts this hour, but ends in different hour same day
+      # To ID: hour < hour_end
+      # time = (hour + 1) - start time; miles = avg_spd * (time/3600);
+      # earnings = (fare + tip) * (time/trip time)
+#   >special case: starts this hour and ends hour 0 of next day
+      # To ID: hour > hour_end
+      # time = (hour + 1) - start time; miles = avg_spd * (time/3600);
+      # earnings = (fare + tip) * (time/trip time)
+# 3. trip started in previous hour and ends this hour
+      # To ID: if hour(dropoff) for previous hour == current hour, then
+      # time = dropoff - (hour-1); miles = avg_spd * (time/3600);
+      # earnings = (fare + tip) * (time/trip time)
+# 4. trip started in some previous hour and ends in some future hour, and includes this hour
+      # To ID: 
+      # time = 3600; miles = avg_speed; earnings = (fare + tip) * (3600/trip time)
+# 5.  hour with no trips/parts of trips
+      # Put in zeros for all
+```
 
+#Create new columns for the pickup hour and dropoff hour
 
+```{r}
+QG <- taxi_data
+QG$pickuphour <- hour(QG$pickup_datetime)
+QG$dropoffhour <- hour(QG$dropoff_datetime)
+
+QG <-QG %>% 
+  mutate(dropoffhour = 
+           case_when(date(dropoff_datetime) == "2013-08-15" ~ hour(dropoff_datetime),
+                     date(dropoff_datetime) == "2013-08-16" ~ as.integer(24)))
+```
+
+#Use crossing command to join the table with a list of numbers from 0 to 23 (hours).
+
+```{r}
+hour <- 0:23
+QG <- crossing(QG, hour)
+nrow(QG) == 24*nrow(taxi_data) #if the taxi_data table had n rows, then the new table has 24n rows, where each row is a trip-hour
+```
+
+# Next, I created a new variable, time_within_hour, that for each trip-hour, records the length of time of that trip in that hour as a duration (from lubridate). The variable time_within_hour is constructed by considering five cases using the case_when() command: (1) the trip starts and ends within the hour, (2) the trip starts in the hour but ends after the hour, (3) the trip starts before the hour but ends in the hour, (4) the trip starts before the hour and ends after the hour, (5) the trip does not overlap with the hour at all. Finally, group by hack license and hour, and summarize.
+
+```{r}
+QG %>%
+  mutate(time_within_hour = 
+           case_when(pickuphour == hour & dropoffhour == hour ~ as.duration(dropoff_datetime-pickup_datetime),
+                     pickuphour == hour & dropoffhour > hour  ~ as.duration(),
+                     pickuphour < hour & dropoffhour == hour ~ ,
+                     pickuphour < hour & dropoffhour > hour ~, 
+                     pickuphour < hour & dropoffhour < hour | pickuphour > hour & dropoffhour > hour ~ 0)) 
+```
 

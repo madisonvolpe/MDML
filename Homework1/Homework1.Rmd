@@ -336,17 +336,19 @@ sum(sample_taxi$trip_time_in_secs > 7200, na.rm = T)
       # To ID: hour < hour_end
       # time = (hour + 1) - start time; miles = avg_spd * (time/3600);
       # earnings = (fare + tip) * (time/trip time)
-# 3. >special case: starts this hour and ends hour 0 of next day
+#   >special case: starts this hour and ends hour 0 of next day
       # To ID: hour > hour_end
       # time = (hour + 1) - start time; miles = avg_spd * (time/3600);
       # earnings = (fare + tip) * (time/trip time)
-# 4. trip started in previous hour and ends this hour
+# 3. trip started in previous hour and ends this hour
       # To ID: if hour(dropoff) for previous hour == current hour, then
       # time = dropoff - (hour-1); miles = avg_spd * (time/3600);
       # earnings = (fare + tip) * (time/trip time)
-# 5. trip started in some previous hour and ends in some future hour, and includes this hour
+# 4. trip started in some previous hour and ends in some future hour, and includes this hour
       # To ID: 
       # time = 3600; miles = avg_speed; earnings = (fare + tip) * (3600/trip time)
+# 5.  hour with no trips/parts of trips
+      # Put in zeros for all
 
 
 

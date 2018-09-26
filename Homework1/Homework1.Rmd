@@ -294,11 +294,14 @@ We checked to see that the number of unique UIDs in taxi_data is equal to the nu
 ## E) For each taxicab, identified by the unique ‘medallion’ field, compute: i) total_trips: the total number of trips begun on 8/15/2018, ii) total_passengers: the total number of passengers carried on 8/15/2018, iii) total_time_with_passengers: the total amount of time spent carrying passengers on 8/15/2018, iv) total_distance: the total distance traveled on 8/15/2018, and v) total_earnings: the total amount of money earned on 8/15/2018. The columns of your final output tibble should be: [medallion, total_trips, total_passengers, total_time_with_passengers, total_distance, total_earnings].
 
 ```{r}
+options(scipen = 999)
 QE <- taxi_data %>%
   group_by(medallion)%>%
-  transmute(total_trips = n(), total_passengers = sum(passenger_count), total_time_with_passengers = sum(trip_time_in_secs), total_distance = sum(trip_distance), total_earnings = sum(total_amount))
+  summarise(total_trips = n(), total_passengers = sum(passenger_count), total_time_with_passengers = sum(trip_time_in_secs), total_distance = sum(trip_distance), total_earnings = sum(total_amount))
 
 head(QE)
+
+#length(unique(QE$medallion)) == nrow(QE) #a check
 ```
 
 ## F) For each driver, identified by his or her anonymized hack license, and for each of the 24 hours on 8/15/2018, compute: i) total_passengers_picked_up: the total number of passengers picked up during the hour, and ii) trips_started: the total number of trips started during the hour. The columns of your final output tibble should be: [hack_license, hour, total_passengers_picked_up, trips_started]. 
@@ -380,4 +383,11 @@ QG <- QG %>%
 head(QG, 24)
 ```
 
-## H
+## H) Read R4DS Chapter 3. Make several plots to investigate relationships that you find interesting in the data (e.g., scatterplots, trend lines, bar charts). Feel free to examine your results from parts E, F, and G above. Describe your findings. You must make at least two plots per group member, and write at least one paragraph per group member describing your findings.
+
+```{r}
+QE$DistanceGroup = cut(QE$total_distance,c(0,20,40,60,80,100,120,140,160,180,200,220,240))
+
+ggplot(data = QE) + 
+  geom_point(mapping = aes(x = total_distance, y = total_earnings, color = DistanceGroup))
+```

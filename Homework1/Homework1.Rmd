@@ -27,17 +27,17 @@ fares <- read_csv("trip_fare_8.csv")
 ## B) Create new datasets based on 08/15/2018
 
 ```{r, eval=FALSE}
-#filtering on 08/15/2018
+# Filtering on 08/15/2018
 trips <- filter(trips, as.Date(trips$pickup_datetime) == "2013-08-15")
 fares <- filter(fares, as.Date(fares$pickup_datetime) == "2013-08-15")
 
-#writing csvs
+# Writing csvs
 write_csv(trips, "trips_hw_1.csv")
 write_csv(fares, "fares_hw_1.csv")
 ``` 
 
 ```{r, message=FALSE}
-#read in csvs 
+# Read in csvs 
 trips <- read_csv("trips_hw_1.csv")
 fares <- read_csv("fares_hw_1.csv") 
 ```
@@ -60,45 +60,46 @@ trips <- trips %>%
   arrange(trip_distance)
 ```
 
-The documentation for the dataset describes trip distance as trip distance measured by the taximeter in miles. The summary command reveals that the range of trip_distance in the dataset is from 0 miles to 5043318 miles. When we subset the trips tibble on trips that have a trip_distance greater than 50, we see that there are only 49 observations out of 473,544 that have trip_distance greater than 50 miles. Therefore, we make the decision to restrict observations in trips to trip_distances greater than 0, but less than 50 miles. 
+The documentation for the dataset describes trip distance as distance measured by the taximeter in miles. The summary command reveals that the range of trip_distance in the dataset is from 0 miles to 5,043,318 miles. When we subset the trips tibble on trips that have a trip_distance greater than 50, we see that there are only 49 observations out of 473,544 that have trip_distance greater than 50 miles. Therefore, we made the decision to restrict observations in trips to trip_distances greater than 0, but less than 50 miles. 
 
 ```{r}
 summary(trips$trip_distance)
 ```
 
-We now see that the range of our trip_distance variable in the trips tibble is from .01 miles to 48 miles, which seems more reasonable. 
+We now see that the range of our trip_distance variable is from .01 miles to 48 miles, which seems more reasonable. 
 
 ### Examining passenger_count
 
 ```{r}
 summary(trips$passenger_count)
 
-# Filter out 0 counts
+# Filter out 0 passenger counts
 trips <- trips %>%
   filter(passenger_count > 0) 
 
-# New summary
 summary(trips$passenger_count)
 ```
 
-According to NYC.gov, the legal amount of passengers for taxis in NYC is between four or five depending on the size of the vehicle. Also small children are allowed to sit on laps in the back seat, therefore a max of six passengers is justifiable. 
+According to NYC.gov, the legal amount of passengers for taxis in NYC is between four or five depending on the size of the vehicle. Also small children are allowed to sit on laps in the back seat, therefore a max of six passengers is justifiable. When we initially ran the summary command, we saw trips that had a passenger count of zero. Therefore, we decided to filter out those trips. After performing this operation, the range of the passenger_count variable was from 1 to 6 passenegers.
 
 ### Examining trip_time_in_secs in trips tibble
 
 ```{r}
 summary(trips$trip_time_in_secs)
 
-# Check if trip_time_in_secs matches difference
+# Add new column to trips tibble that is an alternative measure of trip time in secs
 trips <- mutate(trips, trip_time_in_secs_2 = as.duration(dropoff_datetime - pickup_datetime))
+
+# Test if the two columns have the exact same values 
 all(trips$trip_time_in_secs == as.integer(trips$trip_time_in_secs_2))
 ```
 
-The documentation for the dataset describes the trip_time_in_secs field as the trip time measured in seconds by the taximeter. However, it also states that sometimes this variable is recorded in minutes. Therefore, they note that this variable is unreliable. They state that a more reliable measure of trip time is obtained by subtracting pickup_datetime from dropoff_datetime.
+The documentation for the dataset describes the trip_time_in_secs variable as the trip time measured in seconds by the taximeter. However, it also states that sometimes this variable is recorded in minutes. Therefore, the documentation notes that this variable is unreliable and informs us that a more reliable measure of trip time is obtained by subtracting pickup_datetime from dropoff_datetime.
 
-The initial summary of trip_time_in_secs shows that the range for this value is from -10 to 22080. We then compute the more "accurate" measure of trip time by subtracting pickup_datetime from dropoff_datetime, and we name this variable trip_time_in_secs_2. We use the all command to check if the two columns, trip_time_in_secs and trip_time_in_secs2, are the same for all values. The FALSE informs us that they are not. 
+The initial summary of trip_time_in_secs shows that the range for this value is from -10 to 22080. We then computed the more "accurate" measure of trip time by subtracting pickup_datetime from dropoff_datetime, and we named this variable trip_time_in_secs_2. We used the all command to check if the two columns, trip_time_in_secs and trip_time_in_secs2, are the same for all values. The FALSE informed us that they are not. 
 
 ```{r}
-# Check difference in measures
+# Check difference between the values in the two trip time measures
 trips <- mutate(trips, diff = abs(dseconds(trip_time_in_secs) - trip_time_in_secs_2))
 trips <- arrange(trips, desc(diff)) 
 head(trips$diff, 20)
@@ -120,13 +121,13 @@ trips <- trips %>%
 summary(trips$trip_time_in_secs)
 ```
 
-Next, we create another new variable, diff, which takes the difference from the trip_time_in_secs variable, native to the dataset and sometimes wrong, and trip_time_in_secs2 variable, constructed as a more valid measure of trip time. We then filter to include only the trips that differ between these two measures by less than one minute. 
+Next, we created a new variable, diff, which takes the difference from the trip_time_in_secs variable, which is native to the dataset and can be an inaccurate measure of trip time, and trip_time_in_secs2 variable, constructed as a more valid measure of trip time. We then filtered to include only the trips that differed between these two measures by less than one minute (60 seconds). 
 
-After doing this, the summary of trip_time_in_secs still reveals unlikely numbers, such as -10 second trip time.The max value of 22,080 seconds, or 6.1 hours, seems likely. The mean of 13.8 mins seems likely as well. Ultimately, we decide to keep trips that only have trip_time_in_secs greater than or equal to 60 seconds (1 minute). This was checked by running summary on trip_time_in_secs to reveal the min value of 60. 
+After doing this, the summary of trip_time_in_secs still revealed unlikely numbers, such as a -10 second trip time. However, the max value of 22,080 seconds, or 6.1 hours, did seem more likely. The mean of 13.8 minutes (830 seconds) seems likely as well. Ultimately, we decided to keep trips that only have trip_time_in_secs greater than or equal to 60 seconds (1 minute). This was checked by running summary on trip_time_in_secs to reveal the new min value of 60 seconds. 
 
 ### Examining unrealistic speeds and distances
 
-The dataset documentation mentions cases of unrealistic speeds and distances in the dataset. First, we check for unrealistic speeds by converting trip time from seconds to hours and then calculate average speed by dividing trip distance by trip time in hours.
+The dataset documentation mentions cases of unrealistic speeds and distances in the dataset. First, we checked for unrealistic speeds by converting trip time from seconds to hours and then calculating average speed by dividing trip distance by trip time in hours.
 
 ```{r}
 # Add average speed
@@ -137,7 +138,7 @@ head(sort(trips$avg_speed, decreasing = T))
 trips <- filter(trips, avg_speed < 100)
 summary(trips$avg_speed)
 ```
-We filter out average speeds over 100mph. We leave the very low average trip speeds, since these make sense under heavy traffic conditions. Next, we check unrealistic distances, defined as trip distances that are shorter than the straight-line distance between the pickup location and dropoff location, given in latitude and longitude coordinates. For this, we wanted to use the geoshere package and calculate distance using the Haversine formula. Unfortunately, this process was too memory-intensive to compute for this many observations given limited computing power. The code below shows the removal of impossible longitude and latitude values, as well as the code we would have used to remove unrealistic distances.
+We filtered out average speeds over 100mph. We left the very low average trip speeds, since these make sense under heavy traffic conditions. Next, we checked unrealistic distances, defined as trip distances that are shorter than the straight-line distance between the pickup location and dropoff location, given in latitude and longitude coordinates. For this, we wanted to use the geoshere package and calculate distance using the Haversine formula. Unfortunately, this process was too memory-intensive to compute for this many observations given limited computing power. The code below shows the removal of impossible longitude and latitude values, as well as the code we would have used to remove unrealistic distances.
 
 ```{r}
 # Check number of unrealistic longitude and latitude values
@@ -175,7 +176,7 @@ fares <- fares %>%
 unique(fares$payment_type)
 ```
 
-We decided to examine payment_type and we limited payment_type to only cash and credit payments. In the dataset documentation, these are listed as the only possibilities for the variable payment_type.
+We decided to examine payment_type and we limited payment_type to only cash and credit payments. In the dataset documentation, these are listed as the only possible forms of payment. 
 
 ### Examining fare_amount 
 
@@ -196,11 +197,12 @@ fares <- fares %>%
 summary(fares$fare_amount)
 ```
 
-We see that fare_amount, which represents the meter fare in USD, has a range of -460.00 dollars to 955.00 dollars.  We further find that there are 126 observations with negative values for fare_amount, and we can see that total_amount is also negative for these observations. Furthermore, we observe that there are 4 observations with fare_amount greater than 500 dollars. We decided to drop any fare_amount less than 2.50 because 2.50 is the minimum initial charge listed by NYC Taxi & Limousine Commission, but we keep the fare_amount values over 500 dollars, which may not be unrealistic for longer trips out of the city.
+The fare_amount, which represents the meter fare in USD, has a range of -460.00 dollars to 955.00 dollars.There are 126 observations with negative values for fare_amount that also extend to negative total_amount. Furthermore, we observed 4 observations with fare_amount greater than 500 dollars. We decided to drop any fare_amount less than \$2.50 because $2.50 is the minimum initial charge listed by the NYC Taxi & Limousine Commission, but we decided to keep the fare_amount values over 500 dollars, which may not be unrealistic for longer trips out of the city.
 
 ### Examining other charges and amounts
 
 ```{r}
+# Summary for other variables in the fares tibble
 summary(fares$surcharge)
 summary(fares$mta_tax)
 summary(fares$tip_amount)
@@ -223,15 +225,18 @@ summary(fares$diff)
 fares <- select(fares, -calc_total, -diff)
 ```
 
-We examine the remaining variables, which all look reasonable. We then remove any observations whose total_amount does not match the calculated total from the variables (18 cases).
+We examined the remaining variables, which all looked reasonable. We then removed any observations whose total_amount did not match the calculated total from the variables (18 cases).
 
 ## D) [10 pts] Join the ‘trips’ and ‘fares’ tibbles together into a tibble called ‘taxi_data.’ This joined tibble should have one row for each trip, and should have complete fare information (you may have to deal with duplicates and missing values that arise from the join).
 
 ### Initial Cleaning 
 
 ```{r}
+# Create unique ID variables for trips and fares tibbles 
 trips$UID <- paste(trips$medallion, trips$hack_license, trips$pickup_datetime, sep = "_")
 fares$UID <- paste(fares$medallion, fares$hack_license, fares$pickup_datetime, sep = "_")
+
+# Checking to see if the unique ID repeats one time only. In other words, if it refers to one trip and the fares associated with the one trip 
 
 trips %>% count(UID)%>%filter(n>1) #works for trips 
 length(unique(trips$UID)) == nrow(trips) #also see if true 
@@ -239,34 +244,44 @@ length(unique(trips$UID)) == nrow(trips) #also see if true
 fares %>% count(UID)%>%filter(n>1) #does not work for fares 
 length(unique(fares$UID)) == nrow(fares) #we can see that there are duplicates! 
 
+# Remove duplicate values
 trips <- distinct(trips)
 fares <- distinct(fares)
 ```
 
-What we are observing so far with all these preliminary checks is that the unique identifier in trips does indeed correspond to one trip. However, the unique identifier for fares may correspond to two or more trips. The directions ask us to have one row for each trip. Likewise, we also need to have complete fare information. In this case, our final tibble should have 457,033 rows to correspond to each unique trip from the trips tibble. 
+The preliminary checks reveal that the unique identifier in trips does correspond to just one trip. However, the unique identifier for fares may correspond to two or more trips. The directions asked for a dataset that has one row for each trip along with complete fare information. In this case, our final tibble should have 457,005 rows to correspond to each unique trip from the trips tibble. 
 
 ```{r}
+# Convert pickup_datetime in fares to POSIX so that it could be joined with trips
 fares$pickup_datetime <- as.POSIXct(fares$pickup_datetime)
+
+# Left join trips and fares to save all rows from the trips tibble 
 taxi_data <- trips %>% left_join(fares)
-taxi_data %>% count(UID)%>%filter(n>1) #works for trips 
+
+# Does one  UID still correspond to just one trip ?
+taxi_data %>% count(UID)%>%filter(n>1)
 ``` 
 
-An initial left join to create taxi_data leaves us with 457,113. This is more rows than the initial trips dataset of 457,033. With the trips dataset, we had already found out that each UID accounted for one trip. When reusing the code from above, we see that there are 80 rows that are duplicated. 
+An initial left join to create the taxi_data dataset leaves us with 457,085 observations. This is more rows than the initial trips dataset of 457,005. With the trips dataset, we had already found out that each UID accounted for one trip. When reusing the code from above, we see that there are 80 observations that are duplicated (have the same UID).
 
 ```{r}
-# let's use anti join to see if there are rows in trips that don't have corresponding fares associated
+# Anti join to see if there are rows in trips that do not have corresponding fares associated
 trips %>% anti_join(fares)
 ```
 
+There are 1,011 rows in trips that do not have corresponding fares. 
+
 ```{r}
-# now let's get rid of those "duplicate" rows in the fares tibble by keeping the fare with highest total amount
+# Delete "duplicate" rows in the fares tibble by keeping the fare with highest total amount
 fares <- fares %>% arrange(desc(total_amount)) %>% distinct(medallion, hack_license, pickup_datetime, .keep_all = TRUE)
 ```
 
 ```{r}
+# Inner join trips and fares
 taxi_data <- inner_join(trips,fares)
 
-nrow(taxi_data) + nrow(trips %>% anti_join(fares)) == nrow(trips) # we now see that the number of rows resulting from the inner joing plus the nrow  from the anti join does equal the nrow of trips 
+# Check to see that the number of rows resulting from the inner join plus the nrow from the anti join equals the nrow of trips tibble
+nrow(taxi_data) + nrow(trips %>% anti_join(fares)) == nrow(trips)  
 ```
 
 ```{r}
@@ -274,7 +289,7 @@ length(unique(taxi_data$UID)) == nrow(taxi_data) #one row for each trip test
 sum(is.na(taxi_data[,16:22])) #complete fare information for each trip test. 
 ```
 
-We can see that the number of unique UIDs in taxi_data is equal to the number of rows in taxi_data implying that each row represents only one trip. We can also see that the result of our joining also leads to complete fare information for each trip.
+We checked to see that the number of unique UIDs in taxi_data is equal to the number of rows, which implies that each row represents only one trip. We also checked to see that the join produced complete fare information for each trip.
 
 ## E) For each taxicab, identified by the unique ‘medallion’ field, compute: i) total_trips: the total number of trips begun on 8/15/2018, ii) total_passengers: the total number of passengers carried on 8/15/2018, iii) total_time_with_passengers: the total amount of time spent carrying passengers on 8/15/2018, iv) total_distance: the total distance traveled on 8/15/2018, and v) total_earnings: the total amount of money earned on 8/15/2018. The columns of your final output tibble should be: [medallion, total_trips, total_passengers, total_time_with_passengers, total_distance, total_earnings].
 
@@ -294,13 +309,13 @@ QF$hour <- hour(QF$pickup_datetime)#get hours as its own column
 length(unique(QF$hour)) #check to see if there are 24 unique hours! 
 ```
 
-We added an hour column to the taxi dataset, by taking the hour value of pickup_datetime for each observation of QF. We then checked that there were only 24 unique values representing the 24 hours. 
+We added an hour column to the dataset, by taking the hour value of pickup_datetime for each observation of QF. We then checked that there were only 24 unique values representing the 24 hours. 
 
 ```{r}
 options(scipen = 999)
-Combinations<-crossing(QF$hack_license,QF$hour)
+Combinations<-crossing(QF$hack_license,QF$hour) #each hack license will have the hours 0 -23
 names(Combinations) <- c("hack_license", "hour")
-QF <- right_join(QF, Combinations)
+QF <- right_join(QF, Combinations) #right join to keep everything in the combinations
 ```
 
 ```{r}
@@ -360,9 +375,9 @@ QG <- QG %>%
                                  (time_within_hour / trip_time_in_secs))
          ) %>% 
   group_by(hack_license, hour) %>%
-  
   summarise(total_time_with_passengers = sum(time_within_hour), miles_with_passengers = sum(miles_with_passengers), earnings = sum(earnings))  
 
 head(QG, 24)
 ```
 
+## H

@@ -400,9 +400,17 @@ ggplot(data = QE) +
 
 ```{r}
 QG$MileGroup = cut(QG$miles_with_passengers, c(0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40))
-ggplot(data = QG) + 
-  geom_point(mapping = aes(x = miles_with_passengers, y = earnings, color = MileGroup)) +
+ggplot(data = QG, mapping = aes(x = miles_with_passengers, y = earnings)) + 
+  geom_point(mapping = aes(color = MileGroup)) +
+  geom_smooth()+
   facet_wrap(~hour)+
-  ggtitle( "Total Earnings + Total Distance by  Each Trip (Medallion)")
+  ggtitle( "Earnings + Miles with Passengers by Hour")
 ```
 
+```{r}
+ggplot(data = QG, mapping = aes(x = miles_with_passengers, y = earnings)) + 
+  geom_point(mapping = aes(color = hour)) +
+  scale_color_gradient(low = "red", high = "blue")+
+  geom_smooth()+
+  ggtitle( "Earnings by Miles with Passengers")
+```

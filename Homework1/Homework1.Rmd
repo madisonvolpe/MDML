@@ -406,7 +406,53 @@ ggplot(data = QG, mapping = aes(x = miles_with_passengers, y = earnings)) +
   ggtitle( "Earnings by Miles with Passengers")
 ```
 
-  One relationship that we wanted to highlight was between total earnings brought in by each taxicab, represented by their medallion, compared to their total distance. We can see that in general as a taxicab's  total distance for the day increased so did its total earnings. We created ranges in the total_distance column to serve as a categorical variable in order to better see the relationship between total_earnings and total_distance. This graph did reveal some interesting cases, taxicab distances that were in the range of  0-20 miles in total for the day, tended to have some high values of total_earnings for that day. A hypothesis can be that maybe this particular taxicab only made one 20 mile trip for the entire day and the tip was large.
+  One relationship that we wanted to highlight was between total earnings brought in by each taxicab, represented by their medallion, compared to their total distance. We can see that in general as a taxicab's total distance for the day increased so did its total earnings. We created ranges in the total_distance column to serve as a categorical variable in order to better see the relationship between total_earnings and total_distance. This graph did reveal some interesting cases, taxicab distances that were in the range of  0-20 miles in total for the day, tended to have some high values of total_earnings for that day. A hypothesis can be that maybe this particular taxicab only made one 20 mile trip for the entire day and the tip was large.
   Another relationship that we highlighted was the relationship between earnings and miles_with_passengers. This was on the driver level and unlike total_distance from the previous graph, miles_with_passengers is not an overall sum for the entire day, but rather represents miles driven for a particular hour. Likewise, earnings are not a lumpsum for the entire day, but rather a driver's earnings for each hour. In this graph we see that as miles_with_passengers increased so did earnings. We decided to add hours as a mapping for the scatterplot to see how the hour of a taxicab trip could affect the relationship between miles_with_passengers and earnings. However, it appears no matter the hour, as miles_with_passengers increases so does earnings. 
   
-  
+```{r}
+# Create tip_percent column and dropoff hour column
+taxi_data$tip_percent <- (taxi_data$tip_amount/taxi_data$fare_amount)*100
+taxi_data$drop_hour <- hour(taxi_data$dropoff_datetime)
+taxi_data$i_time <- ifelse(taxi_data$trip_time_in_secs < 3600, "Less than an hour", "One or more hours")
+
+# Summarise into table with median tip percent and dropoff hour
+tip <- taxi_data %>% group_by(drop_hour, i_time) %>% summarise(tip_median = median(tip_percent))
+                              
+# Plot tip median against pickup hour
+ggplot(data = tip, aes(x = drop_hour, y = tip_median, group = i_time)) + 
+  geom_line(aes(linetype = i_time, color = i_time)) +
+  geom_point(aes(color = i_time)) +
+  ggtitle("Median Tip Percent by Hour") +
+    theme(plot.title = element_text(lineheight = .8, face = "bold")) +
+  labs(x = "Hour", y = "Median Tip (%)", linetype = "Trip Time", color = "Trip Time")
+```
+
+  The plot above displays the relationship between median tip (as a percentage of fare amount) and the dropoff hour. The plot shows the trends for trips less than an hour versus those one or more hours long. Interestingly, for trips less than an hour, peak tipping occurs around 8am and 11pm, with low points at about 3am and 3pm. Trips an hour or greater have almost the opposite trend, with peaks around 4am, 3pm, and 5pm. This may be related to when trips of each length tend to occur, leading to few observations for certain hours and trip lengths. This data is also only for a single day. Another point of interest is that medians never reach 20%, which is a common rule of thumb for tipping.
+
+
+```{r, warning=FALSE}
+# Rename values of payment type
+taxi_data$payment_type[taxi_data$payment_type == "CRD"] <- "Card"
+taxi_data$payment_type[taxi_data$payment_type == "CSH"] <- "Cash"
+
+# Box plot of total amount by payment type
+ggplot(taxi_data, aes(x = payment_type, y = total_amount, fill = payment_type)) + 
+  geom_boxplot(outlier.colour = "black", outlier.shape = 16,
+             outlier.size = 2, notch = FALSE) +
+    ggtitle("Total Amount Paid by Payment Type (with outliers)") +
+    theme(plot.title = element_text(lineheight = .8, face = "bold")) +
+  labs(fill = "Payment Type", x = "", y = "Total Amount ($)")
+
+# Zoom in to focus on lower payment amounts
+ggplot(taxi_data, aes(x = payment_type, y = total_amount, fill = payment_type)) + 
+  geom_boxplot(outlier.colour = "black", outlier.shape = 16,
+             outlier.size = 2, notch = FALSE) +
+    ggtitle("Total Amount Paid between $0 and $30 by Payment Type") +
+    theme(plot.title = element_text(lineheight = .8, face = "bold")) +
+  labs(fill = "Payment Type", x = "", y = "Total Amount ($)") +
+  ylim(0, 30)
+```
+
+  In the two plots above, we examine total cost of the taxi trip by payment type. The first plot shows that there are many outliers in total amount, perhaps due to there being many shorter, less expensive trips compared to the number of costly, long journeys by taxi. We can see that card payment seems to be more preferred for larger totals, but not much more than cash. In the next plot we focus in on totals between $0 and $30 to get a better look at the spread of each payment type. Here again we see cards being used for higher amounts, but again not by much more. The median card payment appears to be around $12.50, while the median cash payment appears just short of $10. Again, the data is for only one day, but the plots tell us that both card and cash payments are used for a range of total amounts.
+
+

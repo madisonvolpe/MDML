@@ -12,7 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, message=FALSE}
 library(tidyverse)
 library(lubridate)
-library(geosphere)
+library(ggplot2)
+# library(geosphere) originally needed, but no longer needed due to high computation requirements of package used
 ```
 
 # 2
@@ -398,7 +399,7 @@ ggplot(data = QE) +
 
 ### Plot two
 
-```{r}
+```{r, warning=F, message=F}
 ggplot(data = QG, mapping = aes(x = miles_with_passengers, y = earnings)) + 
   geom_point(mapping = aes(color = hour)) +
   scale_color_gradient(low = "red", high = "blue")+
@@ -408,7 +409,8 @@ ggplot(data = QG, mapping = aes(x = miles_with_passengers, y = earnings)) +
 
   One relationship that we wanted to highlight was between total earnings brought in by each taxicab, represented by their medallion, compared to their total distance. We can see that in general as a taxicab's total distance for the day increased so did its total earnings. We created ranges in the total_distance column to serve as a categorical variable in order to better see the relationship between total_earnings and total_distance. This graph did reveal some interesting cases, taxicab distances that were in the range of  0-20 miles in total for the day, tended to have some high values of total_earnings for that day. A hypothesis can be that maybe this particular taxicab only made one 20 mile trip for the entire day and the tip was large.
   Another relationship that we highlighted was the relationship between earnings and miles_with_passengers. This was on the driver level and unlike total_distance from the previous graph, miles_with_passengers is not an overall sum for the entire day, but rather represents miles driven for a particular hour. Likewise, earnings are not a lumpsum for the entire day, but rather a driver's earnings for each hour. In this graph we see that as miles_with_passengers increased so did earnings. We decided to add hours as a mapping for the scatterplot to see how the hour of a taxicab trip could affect the relationship between miles_with_passengers and earnings. However, it appears no matter the hour, as miles_with_passengers increases so does earnings. 
-  
+
+### Plot three
 ```{r}
 # Create tip_percent column and dropoff hour column
 taxi_data$tip_percent <- (taxi_data$tip_amount/taxi_data$fare_amount)*100
@@ -429,7 +431,7 @@ ggplot(data = tip, aes(x = drop_hour, y = tip_median, group = i_time)) +
 
   The plot above displays the relationship between median tip (as a percentage of fare amount) and the dropoff hour. The plot shows the trends for trips less than an hour versus those one or more hours long. Interestingly, for trips less than an hour, peak tipping occurs around 8am and 11pm, with low points at about 3am and 3pm. Trips an hour or greater have almost the opposite trend, with peaks around 4am, 3pm, and 5pm. This may be related to when trips of each length tend to occur, leading to few observations for certain hours and trip lengths. This data is also only for a single day. Another point of interest is that medians never reach 20%, which is a common rule of thumb for tipping.
 
-
+### Plots four and five
 ```{r, warning=FALSE}
 # Rename values of payment type
 taxi_data$payment_type[taxi_data$payment_type == "CRD"] <- "Card"
